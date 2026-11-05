@@ -113,3 +113,35 @@ export function pathLengthM(points: { lat: number; lon: number }[]): number {
   }
   return total
 }
+
+/** Distance along polyline from start to point index (inclusive of segments before index). */
+export function distanceToIndexM(
+  points: { lat: number; lon: number }[],
+  index: number,
+): number {
+  let total = 0
+  const end = Math.min(Math.max(index, 0), Math.max(points.length - 1, 0))
+  for (let i = 0; i < end; i++) {
+    total += haversineM(points[i].lat, points[i].lon, points[i + 1].lat, points[i + 1].lon)
+  }
+  return total
+}
+
+/** Nearest waypoint index to a position (for mid-route start, e.g. standing at WP 3). */
+export function nearestWaypointIndex(
+  points: { lat: number; lon: number }[],
+  lat: number,
+  lon: number,
+): number {
+  if (points.length === 0) return 0
+  let best = 0
+  let bestD = Infinity
+  for (let i = 0; i < points.length; i++) {
+    const d = haversineM(lat, lon, points[i].lat, points[i].lon)
+    if (d < bestD) {
+      bestD = d
+      best = i
+    }
+  }
+  return best
+}

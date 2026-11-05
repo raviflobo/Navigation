@@ -36,7 +36,15 @@ interface DatasetApi {
   updateWaypoint: (geoId: string, wpId: string, patch: Partial<Waypoint>) => void
   deleteWaypoint: (geoId: string, wpId: string) => void
   undoLastWaypoint: (geoId: string) => void
-  addDirection: (name: string, geolocationIds: string[]) => void
+  addDirection: (
+    name: string,
+    geolocationIds: string[],
+    opts?: {
+      pathGeolocationId?: string
+      startWaypointId?: string
+      endWaypointId?: string
+    },
+  ) => void
   updateDirection: (id: string, patch: Partial<Direction>) => void
   deleteDirection: (id: string) => void
   exportFile: () => Promise<void>
@@ -160,12 +168,19 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
           ),
         }))
       },
-      addDirection: (name, geolocationIds) => {
+      addDirection: (name, geolocationIds, opts) => {
         setDataset((prev) => ({
           ...prev,
           directions: [
             ...prev.directions,
-            { id: newId('dir'), name, geolocationIds },
+            {
+              id: newId('dir'),
+              name,
+              geolocationIds,
+              pathGeolocationId: opts?.pathGeolocationId,
+              startWaypointId: opts?.startWaypointId,
+              endWaypointId: opts?.endWaypointId,
+            },
           ],
         }))
       },

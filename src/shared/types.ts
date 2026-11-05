@@ -29,7 +29,14 @@ export interface GeolocationCluster {
 export interface Direction {
   id: string
   name: string
+  /** Sync / context geos; last is usually the path source if pathGeolocationId omitted. */
   geolocationIds: string[]
+  /** Geolocation whose surveyed waypoints form the walk path. */
+  pathGeolocationId?: string
+  /** Start waypoint id on that path (omit = first waypoint). */
+  startWaypointId?: string
+  /** End waypoint id on that path (omit = last waypoint). */
+  endWaypointId?: string
 }
 
 export interface RouteDataset {
@@ -38,6 +45,45 @@ export interface RouteDataset {
   updatedAt: string
   geolocations: GeolocationCluster[]
   directions: Direction[]
+}
+
+/** Waypoint slice for a direction (start→end inclusive; reversed if end is before start). */
+export function resolveDirectionPath(
+  dataset: RouteDataset,
+  direction: Direction,
+): { pathGeo: GeolocationCluster | null; path: Waypoint[] } {
+  const pathGeoId =
+    direction.pathGeolocationId ??
+    direction.geolocationIds[direction.geolocationIds.length - 1]
+  const pathGeo = pathGeoId
+    ? dataset.geolocations.find((g) => g.id === pathGeoId) ?? null
+    : null
+  if (!pathGeo || pathGeo.waypoints.length === 0) {
+    return { pathGeo, path: [] }
+  }
+  const wps = pathGeo.waypoints
+  let startIdx = 0
+  let endIdx = wps.length - 1
+  if (direction.startWaypointId) {
+    const i = wps.findIndex((w) => w.id === direction.startWaypointId)
+    if (i >= 0) startIdx = i
+  }
+  if (direction.endWaypointId) {
+    const i = wps.findIndex((w) => w.id === direction.endWaypointId)
+    if (i >= 0) endIdx = i
+  }
+  if (startIdx === endIdx) {
+    return { pathGeo, path: [wps[startIdx]] }
+  }
+  if (startIdx < endIdx) {
+    return { pathGeo, path: wps.slice(startIdx, endIdx + 1) }
+  }
+  return { pathGeo, path: wps.slice(endIdx, startIdx + 1).reverse() }
+}
+
+export function waypointLabel(wp: Waypoint, index: number): string {
+  const n = `#${index + 1}`
+  return wp.text?.trim() ? `${n} — ${wp.text.trim()}` : n
 }
 
 /** Known site point — Home (Indore area survey POC). */
