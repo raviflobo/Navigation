@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { DropWaypointSheet } from './DropWaypointSheet'
+import { WaypointHotspotViewer } from './WaypointHotspotViewer'
 import { useDataset } from '../shared/DatasetContext'
 import { useGeolocation } from '../shared/useGeolocation'
 import { isAccuracyOk } from '../shared/geo'
 import { Map2D } from '../shared/Map2D'
 import { WaypointScene3D } from '../shared/WaypointScene3D'
+import { useWaypointHotspot } from '../shared/useWaypointHotspot'
 import type { Waypoint } from '../shared/types'
 
 type DraftCreate = {
@@ -39,6 +41,9 @@ export function SurveyScreen() {
   const selectedId = activeId || dataset.geolocations[0]?.id || ''
   const selected =
     dataset.geolocations.find((g) => g.id === selectedId) ?? null
+  const { hotspot, openHotspot, closeHotspot } = useWaypointHotspot(
+    dataset.geolocations,
+  )
 
   const liveGps = gps.position
     ? {
@@ -84,8 +89,8 @@ export function SurveyScreen() {
       <div className="card">
         <h2>Survey waypoints</h2>
         <p className="muted">
-          Drop new points while walking. Tap a marker on the map (or Edit in the list) to
-          change text, photos, or GPS position.
+          Drop new points while walking. Tap a hotspot to view its photo. Drag to move;
+          use Edit for text/photos.
         </p>
         <div className="field">
           <label>Active geolocation</label>
@@ -128,15 +133,28 @@ export function SurveyScreen() {
       {selected && (
         <>
           <div className="card">
-            <h3>2D path — {selected.name}</h3>
-            <p className="muted" style={{ marginTop: 0 }}>
-              Tap a numbered waypoint to edit it.
-            </p>
+            <h3>2D map — {selected.name}</h3>
+            <div className="map-legend">
+              <span><i className="spawn" /> Geolocation spawn</span>
+              <span><i className="waypoint" /> Waypoint (tap = photo · drag = move)</span>
+              <span><i className="user" /> You (GPS)</span>
+            </div>
             <Map2D
+              className="map-wrap tall"
               geolocations={dataset.geolocations}
               activeGeoId={selected.id}
               user={liveGps}
-              onWaypointClick={({ waypointId, geoId }) => openEdit(geoId, waypointId)}
+              onWaypointClick={({ waypointId, geoId }) => {
+                setActiveId(geoId)
+                openHotspot(geoId, waypointId)
+              }}
+              onWaypointMove={({ waypointId, geoId, lat, lon }) => {
+                updateWaypoint(geoId, waypointId, {
+                  lat,
+                  lon,
+                  accuracyM: 5,
+                })
+              }}
             />
           </div>
           <div className="card">
@@ -240,6 +258,19 @@ export function SurveyScreen() {
               accuracyM: accuracyM ?? draft.waypoint.accuracyM,
             })
             setDraft(null)
+          }}
+        />
+      )}
+
+      {hotspot && !draft && (
+        <WaypointHotspotViewer
+          title={hotspot.geoName}
+          index={hotspot.index}
+          waypoint={hotspot.waypoint}
+          onClose={closeHotspot}
+          onEdit={() => {
+            openEdit(hotspot.geoId, hotspot.waypoint.id)
+            closeHotspot()
           }}
         />
       )}

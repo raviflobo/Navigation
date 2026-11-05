@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { WaypointHotspotViewer } from './WaypointHotspotViewer'
 import { useDataset } from '../shared/DatasetContext'
 import { Map2D } from '../shared/Map2D'
 import { WaypointScene3D } from '../shared/WaypointScene3D'
+import { useWaypointHotspot } from '../shared/useWaypointHotspot'
 
 export function DataPreviewScreen() {
   const { dataset } = useDataset()
@@ -12,12 +14,17 @@ export function DataPreviewScreen() {
 
   const selectedId = activeId || dataset.geolocations[0]?.id || ''
   const selected = dataset.geolocations.find((g) => g.id === selectedId)
+  const { hotspot, openHotspot, closeHotspot } = useWaypointHotspot(
+    dataset.geolocations,
+  )
 
   return (
     <div className="stack">
       <div className="card">
         <h2>Data preview</h2>
-        <p className="muted">Inspect capture quality before User Preview or export.</p>
+        <p className="muted">
+          Inspect capture quality. Tap a waypoint hotspot to view its photo.
+        </p>
         <div className="row">
           <button
             className={mode === '2d' ? 'primary' : 'ghost'}
@@ -48,10 +55,17 @@ export function DataPreviewScreen() {
         <p className="empty">Nothing to preview yet.</p>
       ) : mode === '2d' ? (
         <div className="card">
+          <div className="map-legend">
+            <span><i className="spawn" /> Geolocation spawn + radius</span>
+            <span><i className="waypoint" /> Waypoints (tap for photo)</span>
+          </div>
           <Map2D
             className="map-wrap tall"
             geolocations={dataset.geolocations}
             activeGeoId={selectedId}
+            onWaypointClick={({ waypointId, geoId }) =>
+              openHotspot(geoId, waypointId)
+            }
           />
         </div>
       ) : selected ? (
@@ -76,6 +90,15 @@ export function DataPreviewScreen() {
           </p>
         </div>
       ) : null}
+
+      {hotspot && (
+        <WaypointHotspotViewer
+          title={hotspot.geoName}
+          index={hotspot.index}
+          waypoint={hotspot.waypoint}
+          onClose={closeHotspot}
+        />
+      )}
     </div>
   )
 }

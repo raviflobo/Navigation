@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { WaypointHotspotViewer } from './WaypointHotspotViewer'
 import { useDataset } from '../shared/DatasetContext'
 import { useGeolocation } from '../shared/useGeolocation'
 import { isAccuracyOk } from '../shared/geo'
+import { Map2D } from '../shared/Map2D'
+import { useWaypointHotspot } from '../shared/useWaypointHotspot'
 import type { GeoRole } from '../shared/types'
 
 const ROLES: { value: GeoRole; label: string }[] = [
@@ -18,6 +21,10 @@ export function GeolocationsScreen() {
   const [radiusM, setRadiusM] = useState(40)
 
   if (!dataset) return null
+
+  const { hotspot, openHotspot, closeHotspot } = useWaypointHotspot(
+    dataset.geolocations,
+  )
 
   const pinSpawn = (id: string) => {
     if (!geo.position) {
@@ -103,6 +110,33 @@ export function GeolocationsScreen() {
         </button>
       </div>
 
+      {dataset.geolocations.some((g) => g.spawn || g.waypoints.length > 0) && (
+        <div className="card">
+          <h2>2D map — geolocations + waypoints</h2>
+          <div className="map-legend">
+            <span><i className="spawn" /> Geolocation spawn</span>
+            <span><i className="waypoint" /> Waypoint</span>
+            <span><i className="user" /> You (GPS)</span>
+          </div>
+          <Map2D
+            className="map-wrap tall"
+            geolocations={dataset.geolocations}
+            user={
+              geo.position
+                ? {
+                    lat: geo.position.lat,
+                    lon: geo.position.lon,
+                    accuracyM: geo.position.accuracyM,
+                  }
+                : null
+            }
+            onWaypointClick={({ waypointId, geoId }) =>
+              openHotspot(geoId, waypointId)
+            }
+          />
+        </div>
+      )}
+
       <div className="card">
         <h2>Geolocations ({dataset.geolocations.length})</h2>
         {dataset.geolocations.length === 0 && (
@@ -162,6 +196,15 @@ export function GeolocationsScreen() {
           </div>
         ))}
       </div>
+
+      {hotspot && (
+        <WaypointHotspotViewer
+          title={hotspot.geoName}
+          index={hotspot.index}
+          waypoint={hotspot.waypoint}
+          onClose={closeHotspot}
+        />
+      )}
     </div>
   )
 }

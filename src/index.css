@@ -242,17 +242,248 @@ label {
   border: 1px solid var(--border);
 }
 
+.hotspot-sheet {
+  max-width: 640px;
+}
+
+.hotspot-photo-wrap {
+  width: 100%;
+}
+
+.hotspot-photo {
+  width: 100%;
+  max-height: 55vh;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #000;
+  display: block;
+}
+
 .map-wrap {
   width: 100%;
-  height: 280px;
+  height: 320px;
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--border);
-  background: #111;
+  background: #dbe4ee;
+  z-index: 0;
 }
 
 .map-wrap.tall {
   height: min(55vh, 420px);
+}
+
+.map-wrap .leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #dbe4ee;
+  font: inherit;
+}
+
+.map-count-badge {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 500;
+  background: rgba(15, 20, 25, 0.9);
+  color: #e8eef4;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+/* Exact GPS pins: icon box = pin only; label is absolute and does not shift anchor */
+.leaflet-exact-pin {
+  background: transparent !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.exact-pin {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #0d9488;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  box-sizing: border-box;
+  line-height: 1;
+}
+
+.exact-spawn {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #eab308;
+  border: 3px solid #111827;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  box-sizing: border-box;
+}
+
+.exact-pin-label {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 120px;
+  padding: 2px 5px;
+  border-radius: 6px;
+  background: rgba(15, 20, 25, 0.92);
+  color: #e8eef4;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.map-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.map-legend i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.map-legend i.spawn {
+  background: #e9c46a;
+}
+.map-legend i.waypoint {
+  background: #2a9d8f;
+}
+.map-legend i.user {
+  background: #4cc9f0;
+}
+
+/* Draggable waypoint pin — fixed 28×28, center = exact GPS */
+.map-drag-pin {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #2a9d8f;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  box-sizing: border-box;
+  user-select: none;
+  touch-action: none;
+}
+
+.map-drag-pin span {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.map-drag-pin.is-active {
+  box-shadow: 0 0 0 3px rgba(42, 157, 143, 0.55), 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.map-drag-pin:active {
+  cursor: grabbing;
+}
+
+/* Anchor point = center of .map-pin-dot (exact lat/lon). Label is absolute so it does not shift the pin. */
+.map-pin {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  pointer-events: auto;
+}
+
+.map-pin-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #06221f;
+  background: #2a9d8f;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+  line-height: 1;
+}
+
+.map-pin-spawn {
+  width: 32px;
+  height: 32px;
+}
+
+.map-pin-spawn .map-pin-dot {
+  width: 32px;
+  height: 32px;
+  background: #e9c46a;
+  color: #1a1406;
+}
+
+.map-pin-user .map-pin-dot {
+  background: #4cc9f0;
+  color: #06222a;
+}
+
+.map-pin-next .map-pin-dot {
+  background: #e76f51;
+  color: #1a0a06;
+}
+
+.map-pin-active .map-pin-dot {
+  box-shadow: 0 0 0 3px rgba(42, 157, 143, 0.55);
+}
+
+.map-pin-sub {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 120px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(15, 20, 25, 0.9);
+  color: #e8eef4;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .scene-wrap {
