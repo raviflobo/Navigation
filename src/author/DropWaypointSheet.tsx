@@ -1,17 +1,46 @@
 import { useRef, useState } from 'react'
 import { resizeImageToDataUrl } from '../shared/photos'
 
+export interface WaypointSheetSave {
+  text?: string
+  photos: string[]
+  /** When set, overwrite lat/lon/accuracy from GPS re-pin */
+  lat?: number
+  lon?: number
+  accuracyM?: number
+}
+
 interface Props {
+  mode?: 'create' | 'edit'
+  title?: string
   lat: number
   lon: number
   accuracyM: number
-  onSave: (data: { text?: string; photos: string[] }) => void
+  initialText?: string
+  initialPhotos?: string[]
+  /** Live GPS for “update position” while editing */
+  liveGps?: { lat: number; lon: number; accuracyM: number } | null
+  onSave: (data: WaypointSheetSave) => void
   onCancel: () => void
+  onDelete?: () => void
 }
 
-export function DropWaypointSheet({ lat, lon, accuracyM, onSave, onCancel }: Props) {
-  const [text, setText] = useState('')
-  const [photos, setPhotos] = useState<string[]>([])
+export function DropWaypointSheet({
+  mode = 'create',
+  title,
+  lat,
+  lon,
+  accuracyM,
+  initialText = '',
+  initialPhotos = [],
+  liveGps = null,
+  onSave,
+  onCancel,
+  onDelete,
+}: Props) {
+  const [text, setText] = useState(initialText)
+  const [photos, setPhotos] = useState<string[]>(initialPhotos)
+  const [coords, setCoords] = useState({ lat, lon, accuracyM })
   const [busy, setBusy] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -32,13 +61,30 @@ export function DropWaypointSheet({ lat, lon, accuracyM, onSave, onCancel }: Pro
     }
   }
 
+  const pinFromGps = () => {
+    if (!liveGps) {
+      alert('No GPS fix yet.')
+      return
+    }
+    setCoords({
+      lat: liveGps.lat,
+      lon: liveGps.lon,
+      accuracyM: liveGps.accuracyM,
+    })
+  }
+
   return (
     <div className="sheet-backdrop" onClick={onCancel}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
-        <h2>Waypoint details</h2>
+        <h2>{title || (mode === 'edit' ? 'Edit waypoint' : 'Waypoint details')}</h2>
         <p className="muted">
-          {lat.toFixed(6)}, {lon.toFixed(6)} · ±{accuracyM.toFixed(0)} m
+          {coords.lat.toFixed(6)}, {coords.lon.toFixed(6)} · ±{coords.accuracyM.toFixed(0)} m
         </p>
+        {mode === 'edit' && (
+          <button className="ghost" style={{ marginBottom: 12 }} onClick={pinFromGps}>
+            Update position from GPS
+          </button>
+        )}
         <div className="field">
           <label>Text (optional)</label>
           <textarea
@@ -91,6 +137,16 @@ export function DropWaypointSheet({ lat, lon, accuracyM, onSave, onCancel }: Pro
           <button className="ghost" onClick={onCancel}>
             Cancel
           </button>
+          {mode === 'edit' && onDelete && (
+            <button
+              className="danger"
+              onClick={() => {
+                if (confirm('Delete this waypoint?')) onDelete()
+              }}
+            >
+              Delete
+            </button>
+          )}
           <button
             className="primary"
             disabled={busy}
@@ -98,10 +154,13 @@ export function DropWaypointSheet({ lat, lon, accuracyM, onSave, onCancel }: Pro
               onSave({
                 text: text.trim() || undefined,
                 photos,
+                lat: coords.lat,
+                lon: coords.lon,
+                accuracyM: coords.accuracyM,
               })
             }
           >
-            Save waypoint
+            {mode === 'edit' ? 'Save changes' : 'Save waypoint'}
           </button>
         </div>
       </div>

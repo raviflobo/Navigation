@@ -5,22 +5,48 @@ import { useGeolocation } from '../shared/useGeolocation'
 import { isAccuracyOk } from '../shared/geo'
 import { Map2D } from '../shared/Map2D'
 import { WaypointScene3D } from '../shared/WaypointScene3D'
+import type { Waypoint } from '../shared/types'
+
+type DraftCreate = {
+  mode: 'create'
+  lat: number
+  lon: number
+  accuracyM: number
+}
+
+type DraftEdit = {
+  mode: 'edit'
+  geoId: string
+  waypoint: Waypoint
+}
+
+type Draft = DraftCreate | DraftEdit
 
 export function SurveyScreen() {
-  const { dataset, addWaypoint, deleteWaypoint, undoLastWaypoint } = useDataset()
+  const {
+    dataset,
+    addWaypoint,
+    updateWaypoint,
+    deleteWaypoint,
+    undoLastWaypoint,
+  } = useDataset()
   const gps = useGeolocation(true)
   const [activeId, setActiveId] = useState<string>('')
-  const [draft, setDraft] = useState<{
-    lat: number
-    lon: number
-    accuracyM: number
-  } | null>(null)
+  const [draft, setDraft] = useState<Draft | null>(null)
 
   if (!dataset) return null
 
   const selectedId = activeId || dataset.geolocations[0]?.id || ''
   const selected =
     dataset.geolocations.find((g) => g.id === selectedId) ?? null
+
+  const liveGps = gps.position
+    ? {
+        lat: gps.position.lat,
+        lon: gps.position.lon,
+        accuracyM: gps.position.accuracyM,
+      }
+    : null
 
   const drop = () => {
     if (!selected) {
@@ -38,10 +64,19 @@ export function SurveyScreen() {
       if (!ok) return
     }
     setDraft({
+      mode: 'create',
       lat: gps.position.lat,
       lon: gps.position.lon,
       accuracyM: gps.position.accuracyM,
     })
+  }
+
+  const openEdit = (geoId: string, waypointId: string) => {
+    const geo = dataset.geolocations.find((g) => g.id === geoId)
+    const waypoint = geo?.waypoints.find((w) => w.id === waypointId)
+    if (!geo || !waypoint) return
+    setActiveId(geoId)
+    setDraft({ mode: 'edit', geoId, waypoint })
   }
 
   return (
@@ -49,7 +84,8 @@ export function SurveyScreen() {
       <div className="card">
         <h2>Survey waypoints</h2>
         <p className="muted">
-          Select a geolocation cluster, walk, and drop waypoints (especially at turns).
+          Drop new points while walking. Tap a marker on the map (or Edit in the list) to
+          change text, photos, or GPS position.
         </p>
         <div className="field">
           <label>Active geolocation</label>
@@ -93,18 +129,14 @@ export function SurveyScreen() {
         <>
           <div className="card">
             <h3>2D path — {selected.name}</h3>
+            <p className="muted" style={{ marginTop: 0 }}>
+              Tap a numbered waypoint to edit it.
+            </p>
             <Map2D
               geolocations={dataset.geolocations}
               activeGeoId={selected.id}
-              user={
-                gps.position
-                  ? {
-                      lat: gps.position.lat,
-                      lon: gps.position.lon,
-                      accuracyM: gps.position.accuracyM,
-                    }
-                  : null
-              }
+              user={liveGps}
+              onWaypointClick={({ waypointId, geoId }) => openEdit(geoId, waypointId)}
             />
           </div>
           <div className="card">
@@ -144,29 +176,68 @@ export function SurveyScreen() {
                     </div>
                   )}
                 </div>
-                <button className="danger" onClick={() => deleteWaypoint(selected.id, w.id)}>
-                  Delete
-                </button>
+                <div className="row">
+                  <button className="ghost" onClick={() => openEdit(selected.id, w.id)}>
+                    Edit
+                  </button>
+                  <button
+                    className="danger"
+                    onClick={() => deleteWaypoint(selected.id, w.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </>
       )}
 
-      {draft && selected && (
+      {draft?.mode === 'create' && selected && (
         <DropWaypointSheet
+          mode="create"
           lat={draft.lat}
           lon={draft.lon}
           accuracyM={draft.accuracyM}
+          liveGps={liveGps}
           onCancel={() => setDraft(null)}
-          onSave={({ text, photos }) => {
+          onSave={({ text, photos, lat, lon, accuracyM }) => {
             addWaypoint(selected.id, {
-              lat: draft.lat,
-              lon: draft.lon,
-              accuracyM: draft.accuracyM,
+              lat: lat ?? draft.lat,
+              lon: lon ?? draft.lon,
+              accuracyM: accuracyM ?? draft.accuracyM,
               droppedAt: new Date().toISOString(),
               text,
               photos: photos.length ? photos : undefined,
+            })
+            setDraft(null)
+          }}
+        />
+      )}
+
+      {draft?.mode === 'edit' && (
+        <DropWaypointSheet
+          key={draft.waypoint.id}
+          mode="edit"
+          title="Edit waypoint"
+          lat={draft.waypoint.lat}
+          lon={draft.waypoint.lon}
+          accuracyM={draft.waypoint.accuracyM}
+          initialText={draft.waypoint.text || ''}
+          initialPhotos={draft.waypoint.photos || []}
+          liveGps={liveGps}
+          onCancel={() => setDraft(null)}
+          onDelete={() => {
+            deleteWaypoint(draft.geoId, draft.waypoint.id)
+            setDraft(null)
+          }}
+          onSave={({ text, photos, lat, lon, accuracyM }) => {
+            updateWaypoint(draft.geoId, draft.waypoint.id, {
+              text,
+              photos: photos.length ? photos : undefined,
+              lat: lat ?? draft.waypoint.lat,
+              lon: lon ?? draft.waypoint.lon,
+              accuracyM: accuracyM ?? draft.waypoint.accuracyM,
             })
             setDraft(null)
           }}
