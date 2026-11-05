@@ -3,7 +3,7 @@ import * as maplibregl from 'maplibre-gl'
 import type { GeoJSONSource, Map as MlMap } from 'maplibre-gl'
 import type { Feature, FeatureCollection } from 'geojson'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import type { GeolocationCluster, Waypoint } from './types'
+import { HOME_SPAWN, type GeolocationCluster, type Waypoint } from './types'
 
 export interface MapUser {
   lat: number
@@ -58,8 +58,8 @@ export function Map2D({
         },
         layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
       },
-      center: [75.7, 22.6],
-      zoom: 15,
+      center: [HOME_SPAWN.lon, HOME_SPAWN.lat],
+      zoom: 17,
       attributionControl: { compact: true },
       interactive,
     })

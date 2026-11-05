@@ -1,5 +1,9 @@
 import { openDB, type IDBPDatabase } from 'idb'
-import { emptyDataset, type RouteDataset } from './types'
+import {
+  ensureHomeGeolocation,
+  seededDataset,
+  type RouteDataset,
+} from './types'
 
 const DB_NAME = 'vecv-route-author'
 const DB_VERSION = 1
@@ -38,10 +42,24 @@ export async function loadDataset(): Promise<RouteDataset> {
   const db = await getDb()
   const existing = (await db.get(STORE, KEY)) as RouteDataset | undefined
   if (existing && existing.schemaVersion === 1) {
+    const withHome = ensureHomeGeolocation(existing)
+    const changed =
+      withHome.geolocations.length !== existing.geolocations.length ||
+      withHome.geolocations.some((g, i) => g !== existing.geolocations[i])
+    if (changed) {
+      const next: RouteDataset = {
+        ...withHome,
+        dataVersion: String(Number(withHome.dataVersion || '0') + 1),
+        updatedAt: new Date().toISOString(),
+      }
+      await db.put(STORE, next, KEY)
+      memoryCache = next
+      return next
+    }
     memoryCache = existing
     return existing
   }
-  const fresh = emptyDataset()
+  const fresh = seededDataset()
   await db.put(STORE, fresh, KEY)
   memoryCache = fresh
   return fresh
@@ -117,5 +135,6 @@ export function downloadJson(dataset: RouteDataset): void {
 }
 
 export async function clearDataset(): Promise<RouteDataset> {
-  return saveDataset(emptyDataset())
+  // Reset to seeded Home point (not fully empty)
+  return saveDataset(seededDataset())
 }
